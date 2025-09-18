@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+</body>
+
+</html>
+
+<script>
+  function getUserId() {
+    let embed_user_id = sessionStorage.embed_user_id;
+    if (!embed_user_id) {
+      embed_user_id = Math.trunc(Math.random() * 1000000);
+      sessionStorage.embed_user_id = embed_user_id;
+    }
+    return embed_user_id;
+  }
+  function preSendHandler(event) {
+    if (event?.message?.content) {
+      event.message.content = event.message.content.toUpperCase();
+    }
+  }
+
+  function sendHandler(event) {
+    console.log('send event', event);
+  }
+
+  function feedbackHandler(event) {
+    console.log('feedback', event);
+  }
+
+  function preReceiveHandler(event) {
+    event?.content?.map((element) => {
+      element.type = 'date';
+    });
+  }
+
+  function receiveHandler(event) {
+    console.log('received event', event);
+  }
+
+
+
+  function onChatLoad(instance) {
+    instance.on('chatstarted', (instance) => {
+      window.wxoChatInstance = instance;
+    });
+
+    instance.on('authTokenNeeded', async (event) => {
+
+      // This will make a call to your server to request a new JWT.
+      const result = await fetch(
+        "http://localhost:3001/"
+      );
+      // console.log(await result.text());
+      event.authToken = await result.text();
+    })
+  }
+  async function getIdentityToken() {
+
+    // This will make a call to your server to request a new JWT.
+    const result = await fetch(
+      "http://localhost:3001/"
+    );
+    // console.log(await result.text());
+    window.wxOConfiguration.token = await result.text();
+    console.log("wxOConfiguration: ", window.wxOConfiguration);
+  }
+
+  window.wxOConfiguration = {
+    orchestrationID: "20250901-0320-3155-106e-dc4ef58e519d_20250901-0321-0497-3061-a5c68aa2e2c2",
+    hostURL: "https://dl.watson-orchestrate.ibm.com",
+    rootElementID: "root",
+    chatOptions: {
+      agentId: "df74c3e5-4a15-456f-887a-d24d57ba3fbb",
+      agentEnvironmentId: "359c1b75-6ba6-488e-91dc-e39e47992019",
+      onLoad: onChatLoad
+    },
+    layout: {
+      form: "fullscreen-overlay"
+    }
+  };
+
+
+  getIdentityToken().then(() => {
+    const script = document.createElement("script");
+    script.src = `${"https://dl.watson-orchestrate.ibm.com"}/wxochat/wxoLoader.js?embed=true`;
+    script.addEventListener("load", function () {
+      wxoLoader.init();
+    });
+    document.head.appendChild(script);
+  });
+
+</script>

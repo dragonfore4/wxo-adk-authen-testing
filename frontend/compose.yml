@@ -1,0 +1,13 @@
+services:
+  frontend:
+    container_name: hr-agent-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: release
+    platform: linux/amd64
+    restart: unless-stopped # Restart the container unless it was explicitly stopped
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
