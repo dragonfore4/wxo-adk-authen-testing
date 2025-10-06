@@ -17,6 +17,7 @@ import {
   generateSignedCookie,
 } from 'hono/cookie'
 import { logger } from 'hono/logger'
+import { notDeepStrictEqual } from 'assert'
 
 const app = new Hono()
 
@@ -27,11 +28,15 @@ app.use('*', cors({
 
 app.use(logger())
 
-// const PRIVATE_KEY = fs.readFileSync(path.join(__dirname, '../../adk/keys/client_private_key.pem')).toString()
-// const PUBLIC_KEY = fs.readFileSync(path.join(__dirname, '../../adk/keys/example-jwtRS256.key.pub'),).toString()
+// use client private key to sign jwts sent to wxO
+const CLIENT_PRIVATE_KEY = fs.readFileSync(path.join(__dirname, '../keys/example-jwtRS256.key'))
 
-const SHARED_SECRET = 'my_super_secret_key_which_is_very_long_and_secure';
+// use client public key shared with wxO to verify JWTs originate from our app
+const CLIENT_PUBLIC_KEY = fs.readFileSync(path.join(__dirname, '../keys/example-jwtRS256.key.pub'))
 
+// use ibm public key to encrypt user_payload
+const IBM_PUBLIC_KEY = fs.readFileSync(path.join(__dirname, '../keys/ibmPublic.key.pub'))
+// test key.pem
 
 
 // A time period of 45 days in milliseconds.
@@ -57,7 +62,7 @@ type SessionInfo = {
 async function createJWTString(annoymousUserID: string, sessionInfo: SessionInfo, context: string) {
 
   const jwtContent: jwtContentType = {
-    sub: annoymousUserID,
+    sub: "518234934",
     user_payload: '',
     context
   };
@@ -73,13 +78,19 @@ async function createJWTString(annoymousUserID: string, sessionInfo: SessionInfo
     userPayloadObject.custom_user_id = sessionInfo.customUserID!;
   }
 
+  // if (jwtContent.user_payload) {
+  //   const rsaKey = new NodeRSA(IBM_PUBLIC_KEY);
+  //   const dataString = JSON.stringify(jwtContent.user_payload);
+  //   const utf8Data = Buffer.from(dataString, "utf-8");
+  //   jwtContent.user_payload = rsaKey.encrypt(utf8Data, "base64");
+  // }
+
   const dataString = JSON.stringify(userPayloadObject);
 
   // Encrypted data
-
   const encryptedBuffer = crypto.publicEncrypt(
     {
-      key: SHARED_SECRET,
+      key: IBM_PUBLIC_KEY,
       padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: 'sha256'
     },
@@ -88,8 +99,8 @@ async function createJWTString(annoymousUserID: string, sessionInfo: SessionInfo
 
   jwtContent.user_payload = encryptedBuffer.toString('base64');
 
-  const jwtString = jwtLib.sign(jwtContent, SHARED_SECRET, {
-    algorithm: 'HS256', // algorithm HS256 เปลี่ยน private_key ด้วยเป็นอะไรสักอย่าง
+  const jwtString = jwtLib.sign(jwtContent, CLIENT_PRIVATE_KEY, {
+    algorithm: 'RS256',
     expiresIn: '1000000s'
   })
 
@@ -121,44 +132,20 @@ function getSessionInfo(c: Context) {
   return null;
 }
 
-app.get('/key', (c) => {
-  return c.json({
-    publicKey: PUBLIC_KEY,
-    privateKey: PRIVATE_KEY
-  })
-})
 
-
-app.get('/', async (c: Context) => {
+app.get('/createJWT', async (c: Context) => {
   const annonymousUserID = getOrSetAnnonymousUserID(c);
   const sessionInfo = getSessionInfo(c);
 
   const context = {
     dev_id: 23424,
-    dev_name: 'Name',
+    dev_name: 'kemkai',
     is_active: true
   }
 
   const jwtString = await createJWTString(annonymousUserID, sessionInfo, JSON.stringify(context));
   return c.text(jwtString);
 
-})
-
-app.get("/decrypt", (c) => {
-
-  const userPayload = "ZtKkJJcYZNMkoG3GYAvEXlhNnwj4xWFEMo2Ykk+pgwDI902O19B80B0K5/2TVdSLrYD87brg8SdbzRvrUlbqfRJZiaAe0XbiNNYOa8m0wY2hHnS66Xss/ItfSQ909W0588p4WKcj+xKH+BPGylHoNiha/uG93U9VV4RhAubmxnW4Vw98Tj6+nOvFvvtMKKpnbkXslYpY9bdUBZxzglhPeRG1Zw5Y3otZkV0LTKws6mEAetaXwJhlDjGfIXj/kUNO+i8gFj2s9NJ3oHDQW4Udy4+x/cRVBEPL3mrMwGQBTcDlrwZzlFcv0Yk/BubvyqifeEHBONulyykMyewV91BpfyvcB/Y6UU9IjLkwJaYPAq3ufKTZM/32Vxe/rfyDmkyPz4p6gtxV24JgKA7OMctXIUOUW7X1d5j3+CJ+BasaWuQikh+1mrGvcq2W1LTjUGrnDJ/rWuZfRUdDbCX/PLD4fYENFYPp1ocF7HZJNverTBTwq8tNe7PGqLXf1n98OScQo/O74bpcw2VbtULgzpkvRVcIUQwJ+4Tu9h4Z28pq7DQInsOy1FtjPDKLq1oiXMhNrorsiATP74hRt5yapD/mEItnDsurwLJQKcAuZtK6swpHSOLpG1+z6wDNf5emq6dIYSYaRLlzIhTcWtywvkuvz3yUrIOAmFPL48UISKaEZhA=";
-
-  const encryptedBuffer = Buffer.from(userPayload, 'base64');
-
-  const decryptedBuffer = crypto.privateDecrypt({
-    key: PRIVATE_KEY,
-    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-    oaepHash: 'sha256'
-  }, encryptedBuffer);
-
-  const decryptedString = decryptedBuffer.toString('utf-8');
-
-  return c.text(decryptedString);
 })
 
 serve({

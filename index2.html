@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+</body>
+
+</html>
+
+<script>
+  function getUserId() {
+    let embed_user_id = sessionStorage.embed_user_id;
+    if (!embed_user_id) {
+      embed_user_id = Math.trunc(Math.random() * 1000000);
+      sessionStorage.embed_user_id = embed_user_id;
+    }
+    return embed_user_id;
+  }
+  function preSendHandler(event) {
+    if (event?.message?.content) {
+      event.message.content = event.message.content.toUpperCase();
+    }
+  }
+
+  function sendHandler(event) {
+    console.log('send event', event);
+  }
+
+  function feedbackHandler(event) {
+    console.log('feedback', event);
+  }
+
+  function preReceiveHandler(event) {
+    event?.content?.map((element) => {
+      element.type = 'date';
+    });
+  }
+
+  function receiveHandler(event) {
+    console.log('received event', event);
+  }
+
+
+
+  function onChatLoad(instance) {
+    instance.on('chatstarted', (instance) => {
+      window.wxoChatInstance = instance;
+    });
+
+    instance.on('authTokenNeeded', async (event) => {
+
+      console.log(event)
+      // This will make a call to your server to request a new JWT.
+      const result = await fetch(
+        "http://localhost:3001/createJWT"
+      );
+      console.log("hi", await result.text());
+      // event.authToken = await result.text();
+    })
+  }
+  async function getIdentityToken() {
+
+    // This will make a call to your server to request a new JWT.
+    const result = await fetch(
+      "http://localhost:3001/createJWT"
+    );
+    window.wxOConfiguration.token = await result.text();
+    console.log("wxOConfiguration: ", window.wxOConfiguration);
+  }
+
+  window.wxOConfiguration = {
+    orchestrationID: "20250901-0320-3155-106e-dc4ef58e519d_20250901-0321-0497-3061-a5c68aa2e2c2",
+    hostURL: "https://dl.watson-orchestrate.ibm.com",
+    rootElementID: "root",
+    showLauncher: true,
+    chatOptions: {
+      agentId: "df74c3e5-4a15-456f-887a-d24d57ba3fbb",
+      agentEnvironmentId: "359c1b75-6ba6-488e-91dc-e39e47992019",
+    }
+  };
+
+  // window.wxOConfiguration = {
+  //   clientVersion: "latest",
+  //   orchestrationID: "20250901-0320-3155-106e-dc4ef58e519d_20250901-0321-0497-3061-a5c68aa2e2c2",
+  //   hostURL: "https://dl.watson-orchestrate.ibm.com",
+  //   rootElementID: "root",
+  //   token: "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyo8HIFSdYlr+2kMmR+lQpuh/Uq6s4DC6xsZjTJnTK2iPx5LgM+VDtiVkRVqCrheSChGPz86laZYcmWT1SKmP27KPVxPg6RuhzIn5Qxn2Z6oEIlebfO5c12/Zumlc1HuXzGDYnVV98iHIWm0/oPO4IpuUmYeczmCcZE/odwg+ge6tTZTX+iZGKu9e0w4uopBh4iYezKXqAPfoOZYfQKQ2te1q+s+RNmLMJH4MUcWayUxbCOL3h8GDVX3VuZeQIhNFZhexPrYNjM+P2Ox9ZhfRt0LQ56ooDxS6cmPrSrAOiN/4lPI4eiJtSmELkVId8QbIYMDZqHivLOvRjE9AwNTR7/VHRoN68MFqJqzOLmYG6eNQY3ChY2+g0U9T/ZMxaB89fdBFC0EjVYg/hHN2vfPPy8RWZ85VydQnspAk2nqbi1r0mYkxSXweM4MUcthiYRdDSRuM8nGDmWN4gIW9Pkwtz3JnaSDPV1BmMh+5w3ZJWIbEg9rQWPUCE4mb1jroWEvU8bP1VHKeHstEVxkBhgSA1qaP6L4Q7fzGn+eh+8YlRASaMAU1JMi4K4DJBcvDnNV7eQyswyRcRSNVtXhk2ZYwwUhqFaJSueud21d0sGPXnrLH3Xb+J8zE128yhbzr3lTcU4oP23f9DQFfhxuBOcIT4SF18a55nmpVfr5ldJXuLpMCAwEAAQ==",
+  //   chatOptions: {
+  //     agentId: "df74c3e5-4a15-456f-887a-d24d57ba3fbb",
+  //     agentEnvironmentId: "359c1b75-6ba6-488e-91dc-e39e47992019",
+  //     onLoad: onChatLoad
+  //   },
+  //   layout: {
+  //     form: "fullscreen-overlay"
+  //   }
+  // };
+
+  getIdentityToken().then(() => {
+    const script = document.createElement("script");
+    script.src = `${"https://dl.watson-orchestrate.ibm.com"}/wxochat/wxoLoader.js?embed=true`;
+    script.addEventListener("load", function () {
+      wxoLoader.init();
+    });
+    document.head.appendChild(script);
+  });
+
+</script>
